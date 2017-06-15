@@ -365,6 +365,14 @@ public final class VM {
   }
 
   public static void main(final String[] args) {
+//    if (TruffleOptions.AOT) {
+//      BeforeAnalysisAccess analysis = VMConfiguration.lookup(BeforeAnalysisAccess.class);
+//      ResoJav
+//      ResolvedJavaField filed = new Re;
+//      analysis.registerAsUnsafeAccessed(arg0);
+//    }
+
+
     VmOptions vmOptions = new VmOptions(args);
 
     if (!vmOptions.configUsable()) {
