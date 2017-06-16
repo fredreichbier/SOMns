@@ -4,6 +4,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.dsl.NodeFactory;
@@ -273,26 +275,22 @@ public class Primitives {
    * eager primitive replacement.
    */
   private void initialize(final SomLanguage lang) {
-    List<NodeFactory<? extends ExpressionNode>> primFacts = getFactories();
-    for (NodeFactory<? extends ExpressionNode> primFact : primFacts) {
-      som.primitives.Primitive[] prims = getPrimitiveAnnotation(primFact);
-      if (prims != null) {
-        for (som.primitives.Primitive prim : prims) {
-          Specializer<? extends ExpressionNode> specializer = getSpecializer(prim, primFact);
-          String vmMirrorName = prim.primitive();
+    for (Entry<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> e : primitives.entrySet()) {
+      for (som.primitives.Primitive prim : e.getValue()) {
+        Specializer<? extends ExpressionNode> specializer = getSpecializer(prim, e.getKey());
+        String vmMirrorName = prim.primitive();
 
-          if (!("".equals(vmMirrorName))) {
-            SSymbol signature = Symbols.symbolFor(vmMirrorName);
-            assert !vmMirrorPrimitives.containsKey(signature) : "clash of vmMirrorPrimitive names";
-            vmMirrorPrimitives.put(signature,
-                constructVmMirrorPrimitive(signature, specializer, lang));
-          }
+        if (!("".equals(vmMirrorName))) {
+          SSymbol signature = Symbols.symbolFor(vmMirrorName);
+          assert !vmMirrorPrimitives.containsKey(signature) : "clash of vmMirrorPrimitive names";
+          vmMirrorPrimitives.put(signature,
+              constructVmMirrorPrimitive(signature, specializer, lang));
+        }
 
-          if (!("".equals(prim.selector()))) {
-            SSymbol msgSel = Symbols.symbolFor(prim.selector());
-            assert !eagerPrimitives.containsKey(msgSel) : "clash of selectors and eager specialization";
-            eagerPrimitives.put(msgSel, specializer);
-          }
+        if (!("".equals(prim.selector()))) {
+          SSymbol msgSel = Symbols.symbolFor(prim.selector());
+          assert !eagerPrimitives.containsKey(msgSel) : "clash of selectors and eager specialization";
+          eagerPrimitives.put(msgSel, specializer);
         }
       }
     }
@@ -309,6 +307,22 @@ public class Primitives {
         NoSuchMethodException | SecurityException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static final Map<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> primitives = findAllPrimitives();
+
+  private static Map<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> findAllPrimitives() {
+    Map<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> result = new HashMap<>();
+    List<NodeFactory<? extends ExpressionNode>> primFacts = getFactories();
+
+    for (NodeFactory<? extends ExpressionNode> primFact : primFacts) {
+      som.primitives.Primitive[] prims = getPrimitiveAnnotation(primFact);
+      if (prims != null) {
+        result.put(primFact, prims);
+      }
+    }
+
+    return result;
   }
 
   private static List<NodeFactory<? extends ExpressionNode>> getFactories() {
