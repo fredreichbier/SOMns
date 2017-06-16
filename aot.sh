@@ -26,7 +26,8 @@ ${GRAALVM_DIR}/jdk/bin/java \
  -H:InspectServerContentPath=${LIB}/svm/inspect \
  -H:CLibraryPath=${LIB}/svm/clibraries/darwin-amd64 \
  -H:Path=. -H:+MultiThreaded -R:YoungGenerationSize=1g -R:OldGenerationSize=3g \
- -H:Class=som.VM -H:Name=somns -H:Features=com.oracle.svm.truffle.TruffleFeature
+ -H:Class=som.VM -H:Name=somns -H:Features=com.oracle.svm.truffle.TruffleFeature\
+ -H:-ThrowUnsafeOffsetErrors
 
 #  -H:VerifyNamingConventions=true \
 # -H:+AddAllCharsets -H:Class=org.truffleruby.Main -H:Name=ruby -H:Features=com.oracle.svm.truffle.TruffleFeature,com.oracle.svm.truffle.TruffleFeature,com.oracle.svm.jnr.SubstrateJNRFeature -H:SubstitutionResources=org/truffleruby/aot/substitutions.json
