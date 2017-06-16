@@ -171,7 +171,8 @@ BOOT_CLASSPATH = ('-Xbootclasspath/a:'
              + BASE_DIR + '/libs/truffle/sdk/mxbuild/dists/graal-sdk.jar:'
              + BASE_DIR + '/libs/truffle/truffle/mxbuild/dists/truffle-api.jar:'
              + BASE_DIR + '/libs/truffle/truffle/mxbuild/dists/truffle-debug.jar:'
-             + BASE_DIR + '/libs/somns-deps.jar')
+             + BASE_DIR + '/libs/somns-deps.jar:'
+             + '/Users/smarr/Projects/SOM/graalvm/graalvm-0.24/jdk/jre/lib/jvmci/jvmci-api.jar')
 
 SOM_ARGS = [BOOT_CLASSPATH, 'som.VM',
             '--platform', args.som_platform, '--kernel', args.som_kernel]
