@@ -2,6 +2,8 @@ package som.interpreter.nodes;
 
 import static som.interpreter.nodes.SOMNode.unwrapIfNecessary;
 
+import java.util.concurrent.locks.Lock;
+
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -181,7 +183,9 @@ public final class MessageSendNode {
       Specializer<EagerlySpecializableNode> specializer = prims.getEagerSpecializer(selector,
           arguments, argumentNodes);
 
-      synchronized (getLock()) {
+      Lock lock = getLock();
+      try {
+        lock.lock();
         if (specializer != null) {
           EagerlySpecializableNode newNode = specializer.create(arguments, argumentNodes, getSourceSection(), !specializer.noWrapper());
           if (specializer.noWrapper()) {
@@ -191,14 +195,20 @@ public final class MessageSendNode {
           }
         }
         return makeSend();
+      } finally {
+        lock.unlock();
       }
     }
 
     protected abstract PreevaluatedExpression makeSend();
 
     private PreevaluatedExpression makeEagerPrim(final EagerlySpecializableNode prim) {
-      synchronized (getLock()) {
+      Lock lock = getLock();
+      try {
+        lock.lock();
         return makeEagerPrimUnsyced(prim);
+      } finally {
+        lock.unlock();
       }
     }
 
