@@ -132,16 +132,15 @@ public class Primitives {
    * it is to be instantiated.
    */
   public static class Specializer<T> {
-    protected final VM vm;
+    protected VM vm;
     protected final som.primitives.Primitive prim;
     protected final NodeFactory<T> fact;
     private final NodeFactory<? extends ExpressionNode> extraChildFactory;
 
     @SuppressWarnings("unchecked")
-    public Specializer(final som.primitives.Primitive prim, final NodeFactory<T> fact, final VM vm) {
+    public Specializer(final som.primitives.Primitive prim, final NodeFactory<T> fact) {
       this.prim = prim;
       this.fact = fact;
-      this.vm   = vm;
 
       if (prim.extraChild() == NoChild.class) {
         extraChildFactory = null;
@@ -154,6 +153,11 @@ public class Primitives {
           throw new RuntimeException(e);
         }
       }
+    }
+
+    public void initialize(final VM vm) {
+      assert vm != null;
+      this.vm = vm;
     }
 
     public boolean inParser() {
@@ -201,6 +205,7 @@ public class Primitives {
       int offset = 2;
 
       if (prim.requiresContext()) {
+        assert vm != null : "vm i.e. the context was not yet initialized";
         ctorArgs[offset] = vm;
         offset += 1;
       }
@@ -275,6 +280,8 @@ public class Primitives {
    * eager primitive replacement.
    */
   private void initialize(final SomLanguage lang) {
+    initializeSpecializers(lang.getVM());
+
     for (Entry<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> e : primitives.entrySet()) {
       for (som.primitives.Primitive prim : e.getValue()) {
         Specializer<? extends ExpressionNode> specializer = getSpecializer(prim, e.getKey());
@@ -323,6 +330,12 @@ public class Primitives {
     }
 
     return result;
+  private static void initializeSpecializers(final VM vm) {
+    for (Specializer<?> spez : specializers.values()) {
+      spez.initialize(vm);
+    }
+  }
+
   }
 
   private static List<NodeFactory<? extends ExpressionNode>> getFactories() {

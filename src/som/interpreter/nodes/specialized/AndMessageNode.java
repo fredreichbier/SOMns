@@ -8,7 +8,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.source.SourceSection;
 
-import som.VM;
 import som.interpreter.nodes.ExpressionNode;
 import som.interpreter.nodes.OperationNode;
 import som.interpreter.nodes.literals.BlockNode;
@@ -34,13 +33,13 @@ public abstract class AndMessageNode extends BinaryComplexOperation {
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public AndOrSplzr(final Primitive prim,
-        final NodeFactory<BinaryExpressionNode> fact, final VM vm) {
-      this(prim, fact, (NodeFactory) AndBoolMessageNodeFactory.getInstance(), vm);
+        final NodeFactory<BinaryExpressionNode> fact) {
+      this(prim, fact, (NodeFactory) AndBoolMessageNodeFactory.getInstance());
     }
 
     protected AndOrSplzr(final Primitive prim, final NodeFactory<BinaryExpressionNode> msgFact,
-        final NodeFactory<BinaryExpressionNode> boolFact, final VM vm) {
-      super(prim, msgFact, vm);
+        final NodeFactory<BinaryExpressionNode> boolFact) {
+      super(prim, msgFact);
       this.boolFact = boolFact;
     }
 

@@ -11,7 +11,6 @@ import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.profiles.ValueProfile;
 import com.oracle.truffle.api.source.SourceSection;
 
-import som.VM;
 import som.interpreter.Invokable;
 import som.interpreter.SArguments;
 import som.interpreter.nodes.ExpressionNode;
@@ -38,8 +37,8 @@ import tools.dym.Tags.BasicPrimitiveOperation;
            receiverType = SArray.class, inParser = false, specializer = TxAtPutPrim.class)
 public abstract class AtPutPrim extends TernaryExpressionNode {
   protected static final class TxAtPutPrim extends Specializer<TernaryExpressionNode> {
-    public TxAtPutPrim(final Primitive prim, final NodeFactory<TernaryExpressionNode> fact, final VM vm) {
-      super(prim, fact, vm);
+    public TxAtPutPrim(final Primitive prim, final NodeFactory<TernaryExpressionNode> fact) {
+      super(prim, fact);
     }
 
     @Override
