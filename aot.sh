@@ -6,10 +6,12 @@ LIB=${GRAALVM_DIR}/lib
 GRAAL=${LIB}/graal
 
 SOM_DIR=/Users/smarr/Projects/SOM/SOMns
+TRUFFLE_DIR=${SOM_DIR}/libs/truffle/truffle/mxbuild/dists
+SDK_DIR=${SOM_DIR}/libs/truffle/sdk/mxbuild/dists/
 
-CLASSPATH=${JVMCI_DIR}/jvmci-api.jar:${JVMCI_DIR}/jvmci-hotspot.jar:${GRAAL}/enterprise-graal.jar:${GRAAL}/graal.jar:${SOM_DIR}/libs/truffle/truffle/mxbuild/dists/truffle-api.jar:${SOM_DIR}/libs/truffle/truffle/mxbuild/dists/truffle-debug.jar:${LIB}/truffle/truffle-om.jar:${LIB}/svm/svm.jar:${LIB}/svm/svm-api.jar:${LIB}/svm/objectfile.jar:${LIB}/svm/lib/gson-2.2.4.jar
+CLASSPATH=${JVMCI_DIR}/jvmci-api.jar:${JVMCI_DIR}/jvmci-hotspot.jar:${GRAAL}/enterprise-graal.jar:${SDK_DIR}/graal-sdk.jar:${GRAAL}/graal.jar:${TRUFFLE_DIR}/truffle-api.jar:${TRUFFLE_DIR}/truffle-debug.jar:${LIB}/truffle/truffle-om.jar:${LIB}/svm/svm.jar:${LIB}/svm/svm-api.jar:${LIB}/svm/objectfile.jar:${LIB}/svm/lib/gson-2.2.4.jar
 
-# CLASSPATH=${JVMCI_DIR}/jvmci-api.jar:${JVMCI_DIR}/jvmci-hotspot.jar:${GRAAL}/enterprise-graal.jar:${GRAAL}/graal.jar:${SOM_DIR}/libs/truffle/truffle/mxbuild/dists/truffle-api.jar:${SOM_DIR}/libs/truffle/truffle/mxbuild/dists/truffle-debug.jar:${LIB}/truffle/truffle-om.jar:${LIB}/svm/svm.jar:${LIB}/svm/svm-api.jar:${LIB}/svm/objectfile.jar:${LIB}/svm/lib/gson-2.2.4.jar:${GRAALVM_DIR}/language/R/jline.jar
+# CLASSPATH=${JVMCI_DIR}/jvmci-api.jar:${JVMCI_DIR}/jvmci-hotspot.jar:${GRAAL}/enterprise-graal.jar:${GRAAL}/graal.jar:${TRUFFLE_DIR}/truffle-api.jar:${TRUFFLE_DIR}/truffle-debug.jar:${LIB}/truffle/truffle-om.jar:${LIB}/svm/svm.jar:${LIB}/svm/svm-api.jar:${LIB}/svm/objectfile.jar:${LIB}/svm/lib/gson-2.2.4.jar:${GRAALVM_DIR}/language/R/jline.jar
 
 
 ${GRAALVM_DIR}/jdk/bin/java \
