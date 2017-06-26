@@ -284,7 +284,7 @@ public class Primitives {
 
     for (Entry<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> e : primitives.entrySet()) {
       for (som.primitives.Primitive prim : e.getValue()) {
-        Specializer<? extends ExpressionNode> specializer = getSpecializer(prim, e.getKey());
+        Specializer<? extends ExpressionNode> specializer = specializers.get(prim);
         String vmMirrorName = prim.primitive();
 
         if (!("".equals(vmMirrorName))) {
@@ -303,39 +303,55 @@ public class Primitives {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private <T> Specializer<T> getSpecializer(final som.primitives.Primitive prim, final NodeFactory<T> factory) {
-    try {
-      return prim.specializer().
-          getConstructor(som.primitives.Primitive.class, NodeFactory.class, VM.class).
-          newInstance(prim, factory, vm);
-    } catch (InstantiationException | IllegalAccessException |
-        IllegalArgumentException | InvocationTargetException |
-        NoSuchMethodException | SecurityException e) {
-      throw new RuntimeException(e);
-    }
+  private static final Map<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> primitives;
+  private static final Map<som.primitives.Primitive, Specializer<? extends ExpressionNode>> specializers;
+
+  static {
+    primitives = new HashMap<>();
+    specializers = new HashMap<>();
+
+    findAllPrimitivesAndSpecializers();
   }
 
-  private static final Map<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> primitives = findAllPrimitives();
-
-  private static Map<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> findAllPrimitives() {
-    Map<NodeFactory<? extends ExpressionNode>, som.primitives.Primitive[]> result = new HashMap<>();
+  private static void findAllPrimitivesAndSpecializers() {
     List<NodeFactory<? extends ExpressionNode>> primFacts = getFactories();
 
     for (NodeFactory<? extends ExpressionNode> primFact : primFacts) {
       som.primitives.Primitive[] prims = getPrimitiveAnnotation(primFact);
       if (prims != null) {
-        result.put(primFact, prims);
+        primitives.put(primFact, prims);
+        for (som.primitives.Primitive prim : prims) {
+          @SuppressWarnings("rawtypes")
+          Class<? extends Specializer> spezCls = prim.specializer();
+          assert !specializers.containsKey(prim);
+
+          Specializer<? extends ExpressionNode> spez = instantiateSpecializer(primFact, prim, spezCls);
+          specializers.put(prim, spez);
+        }
       }
     }
+  }
 
-    return result;
   private static void initializeSpecializers(final VM vm) {
     for (Specializer<?> spez : specializers.values()) {
       spez.initialize(vm);
     }
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  private static Specializer<? extends ExpressionNode> instantiateSpecializer(
+      final NodeFactory<? extends ExpressionNode> primFact,
+      final som.primitives.Primitive prim,
+      final Class<? extends Specializer> spezCls) {
+    try {
+      return spezCls.
+          getConstructor(som.primitives.Primitive.class, NodeFactory.class).
+          newInstance(prim, primFact);
+    } catch (InstantiationException | IllegalAccessException |
+        IllegalArgumentException | InvocationTargetException |
+        NoSuchMethodException | SecurityException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static List<NodeFactory<? extends ExpressionNode>> getFactories() {
