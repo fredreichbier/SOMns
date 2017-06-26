@@ -89,7 +89,7 @@ public class ActorExecutionTrace {
   private static FrontendConnector front = null;
 
   private static long collectedMemory = 0;
-  private static TraceWorkerThread workerThread = new TraceWorkerThread();
+  private static TraceWorkerThread workerThread;
 
   static {
     if (VmSettings.MEMORY_TRACING) {
@@ -209,6 +209,7 @@ public class ActorExecutionTrace {
     buffer.returnBuffer();
 
     // start worker thread for trace processing
+    workerThread = new TraceWorkerThread();
     workerThread.start();
   }
 
