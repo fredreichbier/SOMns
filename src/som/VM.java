@@ -1,14 +1,11 @@
 package som;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
-import com.oracle.svm.api.config.Feature;
-import com.oracle.svm.core.annotate.AutomaticFeature;
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -28,8 +25,6 @@ import com.oracle.truffle.tools.Profiler;
 import com.oracle.truffle.tools.ProfilerInstrument;
 
 import coveralls.truffle.Coverage;
-import jdk.vm.ci.meta.MetaAccessProvider;
-import jdk.vm.ci.meta.ResolvedJavaField;
 import som.compiler.MixinDefinition;
 import som.compiler.SourcecodeCompiler;
 import som.interpreter.Method;
@@ -40,6 +35,7 @@ import som.interpreter.actors.Actor.ActorProcessingThreadFactory;
 import som.interpreter.actors.SFarReference;
 import som.interpreter.actors.SPromise;
 import som.interpreter.actors.SPromise.SResolver;
+import som.interpreter.objectstorage.StorageAccessor;
 import som.primitives.processes.ChannelPrimitives;
 import som.primitives.processes.ChannelPrimitives.ProcessThreadFactory;
 import som.primitives.threading.TaskThreads.ForkJoinThreadFactory;
@@ -49,7 +45,6 @@ import som.vm.Primitives;
 import som.vm.VmOptions;
 import som.vm.VmSettings;
 import som.vm.constants.KernelObj;
-import som.vmobjects.SObject.SMutableObject;
 import som.vmobjects.SObjectWithClass.SObjectWithoutFields;
 import tools.concurrency.ActorExecutionTrace;
 import tools.concurrency.TracingActors;
@@ -371,22 +366,9 @@ public final class VM {
     objectSystem.executeApplication(vmMirror, mainActor);
   }
 
-  @AutomaticFeature
-  private static class AotFeature implements Feature {
-    @Override
-    public void beforeAnalysis(final BeforeAnalysisAccess baa) {
-      MetaAccessProvider metaAccess = baa.getMetaAccess();
-      try {
-        Field f = SMutableObject.class.getDeclaredField("field1");
-        ResolvedJavaField rjf = metaAccess.lookupJavaField(f);
-        baa.registerAsUnsafeAccessed(rjf);
-      } catch (NoSuchFieldException | SecurityException e) {
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
   public static void main(final String[] args) {
+    StorageAccessor.initAccessors();
+
     VmOptions vmOptions = new VmOptions(args);
 
     if (!vmOptions.configUsable()) {

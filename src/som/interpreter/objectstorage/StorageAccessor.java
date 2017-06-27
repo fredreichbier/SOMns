@@ -4,6 +4,8 @@ import java.lang.reflect.Field;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.TruffleOptions;
 import com.oracle.truffle.api.profiles.IntValueProfile;
 
 import som.compiler.MixinDefinition.SlotDefinition;
@@ -34,8 +36,18 @@ public abstract class StorageAccessor {
 
   static {
     unsafe = loadUnsafe();
-    objAccessors = initObjectAccessors();
-    primAccessors = initPrimitiveAccessors();
+
+    objAccessors = new AbstractObjectAccessor[MAX_OBJECT_FIELDS];
+    primAccessors = new AbstractPrimitiveAccessor[MAX_PRIM_FIELDS];
+  }
+
+  private static long getFieldOffset(final String fieldName) {
+    try {
+      Field field = SMutableObject.class.getDeclaredField(fieldName);
+      return unsafe.objectFieldOffset(field);
+    } catch (NoSuchFieldException | SecurityException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public static AbstractObjectAccessor getObjectAccessor(final int idx) {
@@ -48,42 +60,49 @@ public abstract class StorageAccessor {
     return primAccessors[idx];
   }
 
-  private static AbstractObjectAccessor[] initObjectAccessors() {
-    AbstractObjectAccessor[] accessors = new AbstractObjectAccessor[MAX_OBJECT_FIELDS];
+  /**
+   * Initialize field accessors with the offsets in the S*Object classes.
+   */
+  @TruffleBoundary
+  public static void initAccessors() {
+    initObjectAccessors();
+    initPrimitiveAccessors();
+  }
 
-    try {
+  private static void initObjectAccessors() {
+    if (TruffleOptions.AOT) {
+      objAccessors[0] = new DirectObjectAccessor(ObjectAddresses.field1Offset);
+      objAccessors[1] = new DirectObjectAccessor(ObjectAddresses.field2Offset);
+      objAccessors[2] = new DirectObjectAccessor(ObjectAddresses.field3Offset);
+      objAccessors[3] = new DirectObjectAccessor(ObjectAddresses.field4Offset);
+      objAccessors[4] = new DirectObjectAccessor(ObjectAddresses.field5Offset);
+    } else {
       for (int i = 0; i < SObject.NUM_OBJECT_FIELDS; i += 1) {
-        Field field = SMutableObject.class.getDeclaredField("field" + (i + 1));
-        long offset = unsafe.objectFieldOffset(field);
-        accessors[i] = new DirectObjectAccessor(offset);
+        objAccessors[i] = new DirectObjectAccessor(getFieldOffset("field" + (i + 1)));
       }
-    } catch (NoSuchFieldException | SecurityException e) {
-      throw new RuntimeException(e);
     }
 
     for (int i = SObject.NUM_OBJECT_FIELDS; i < MAX_OBJECT_FIELDS; i += 1) {
-      accessors[i] = new ExtensionObjectAccessor(i);
+      objAccessors[i] = new ExtensionObjectAccessor(i);
     }
-    return accessors;
   }
 
-  private static AbstractPrimitiveAccessor[] initPrimitiveAccessors() {
-    AbstractPrimitiveAccessor[] accessors = new AbstractPrimitiveAccessor[MAX_PRIM_FIELDS];
-
-    try {
+  private static void initPrimitiveAccessors() {
+    if (TruffleOptions.AOT) {
+      primAccessors[0] = new DirectPrimitiveAccessor(ObjectAddresses.prim1Offset, 0);
+      primAccessors[1] = new DirectPrimitiveAccessor(ObjectAddresses.prim1Offset, 1);
+      primAccessors[2] = new DirectPrimitiveAccessor(ObjectAddresses.prim1Offset, 2);
+      primAccessors[3] = new DirectPrimitiveAccessor(ObjectAddresses.prim1Offset, 3);
+      primAccessors[4] = new DirectPrimitiveAccessor(ObjectAddresses.prim1Offset, 4);
+    } else {
       for (int i = 0; i < SObject.NUM_PRIMITIVE_FIELDS; i += 1) {
-        Field field = SMutableObject.class.getDeclaredField("primField" + (i + 1));
-        long offset = unsafe.objectFieldOffset(field);
-        accessors[i] = new DirectPrimitiveAccessor(offset, i);
+        primAccessors[i] = new DirectPrimitiveAccessor(getFieldOffset("primField" + (i + 1)), i);
       }
-    } catch (NoSuchFieldException | SecurityException e) {
-      throw new RuntimeException(e);
     }
 
     for (int i = SObject.NUM_PRIMITIVE_FIELDS; i < MAX_PRIM_FIELDS; i += 1) {
-      accessors[i] = new ExtensionPrimitiveAccessor(i);
+      primAccessors[i] = new ExtensionPrimitiveAccessor(i);
     }
-    return accessors;
   }
 
   public abstract static class AbstractObjectAccessor extends StorageAccessor {
