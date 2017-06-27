@@ -50,12 +50,12 @@ public abstract class RegisterOnPromiseNode {
       // resolving the promise, thus we lock on the promise's value, which is
       // used to group setting the promise resolution state and processing the
       // message.
-      synchronized (promiseValue) {
+//      synchronized (promiseValue) {
         if (promise.isTriggerPromiseResolutionBreakpoint()) {
           msg.setIsMessageReceiverBreakpoint(true);
         }
         schedule.execute(promise, msg, current);
-      }
+//      }
     }
   }
 
@@ -100,9 +100,9 @@ public abstract class RegisterOnPromiseNode {
       // resolving the promise, thus we lock on the promise's value, which is
       // used to group setting the promise resolution state and processing the
       // message.
-      synchronized (promiseValue) {
+//      synchronized (promiseValue) {
         schedule.execute(promise, msg, current);
-      }
+//      }
     }
   }
 }

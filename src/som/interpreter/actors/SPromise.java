@@ -411,11 +411,11 @@ public class SPromise extends SObjectWithClass {
       //               because otherwise we might end up in a deadlock, but we still need to group the
       //               scheduling of messages and the propagation of the resolution state, otherwise
       //               we might see message ordering issues
-      synchronized (wrapped) {
+//      synchronized (wrapped) {
         // LOCKING NOTE: We can split the scheduling out of the synchronized
         // because after resolving the promise, all clients will schedule their
         // callbacks/msg themselves
-        synchronized (p) {
+      synchronized (p) {
           assert p.assertNotCompleted();
           // TODO: is this correct? can we just resolve chained promises like this? this means, their state changes twice. I guess it is ok, not sure about synchronization thought. They are created as 'chained', and then there is the resolute propagation accross chained promisses
           // TODO use a special constructor to create chained promises???
@@ -430,7 +430,7 @@ public class SPromise extends SObjectWithClass {
           scheduleAllOnErrorUnsync(p, result, current, actorPool, isBreakpointOnPromiseResolution);
         }
         resolveChainedPromisesUnsync(type, p, result, current, actorPool, isBreakpointOnPromiseResolution);
-      }
+//      }
     }
 
     /**
