@@ -31,6 +31,11 @@ ${GRAALVM_DIR}/jdk/bin/java \
  -H:Class=som.VM -H:Name=somns -H:Features=com.oracle.svm.truffle.TruffleFeature\
  -H:-ThrowUnsafeOffsetErrors
 
+# \
+#   -H:+PrintRuntimeCompileMethods
+
+ # -H:+PrintMethodHistogram
+
 #  -H:VerifyNamingConventions=true \
 # -H:+AddAllCharsets -H:Class=org.truffleruby.Main -H:Name=ruby -H:Features=com.oracle.svm.truffle.TruffleFeature,com.oracle.svm.truffle.TruffleFeature,com.oracle.svm.jnr.SubstrateJNRFeature -H:SubstitutionResources=org/truffleruby/aot/substitutions.json
  
