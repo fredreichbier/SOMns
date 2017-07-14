@@ -8,6 +8,7 @@ import com.oracle.truffle.api.source.SourceSection;
 
 import som.VM;
 import som.interpreter.TruffleCompiler;
+import som.interpreter.nodes.ArgumentReadNode;
 import som.interpreter.nodes.ExpressionNode;
 import som.interpreter.nodes.MessageSendNode;
 import som.interpreter.nodes.MessageSendNode.GenericMessageSendNode;
@@ -89,6 +90,11 @@ public final class EagerBinaryPrimitiveNode extends EagerPrimitive {
 
   @Override
   public Object executeGeneric(final VirtualFrame frame) {
+    if(argument instanceof ArgumentReadNode.LocalArgumentReadNode) {
+      Node replacement = new EagerBinaryPrimitiveNodeWithArgumentRead(primitive.getSourceSection(),
+              selector, receiver, (ArgumentReadNode.LocalArgumentReadNode)argument, primitive);
+      replace(replacement);
+    }
     Object rcvr = receiver.executeGeneric(frame);
     Object arg  = argument.executeGeneric(frame);
 
@@ -135,6 +141,8 @@ public final class EagerBinaryPrimitiveNode extends EagerPrimitive {
       ((ExprWithTagsNode) newNode).tagMark = primitive.tagMark;
     } else if (newNode instanceof WrapperNode) {
       assert ((WrapperNode) newNode).getDelegateNode() == this : "Wrapping should not also do specialization or other changes, I think";
+    } else if(newNode instanceof EagerBinaryPrimitiveNodeWithArgumentRead) {
+
     } else {
       throw new NotYetImplementedException();
     }
