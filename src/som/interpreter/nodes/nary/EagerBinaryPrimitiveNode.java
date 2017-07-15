@@ -91,9 +91,15 @@ public final class EagerBinaryPrimitiveNode extends EagerPrimitive {
   @Override
   public Object executeGeneric(final VirtualFrame frame) {
     if(argument instanceof ArgumentReadNode.LocalArgumentReadNode) {
-      Node replacement = new EagerBinaryPrimitiveNodeWithArgumentRead(primitive.getSourceSection(),
-              selector, receiver, (ArgumentReadNode.LocalArgumentReadNode)argument, primitive);
+      EagerBinaryPrimitiveNodeWithArgumentRead replacement =
+              new EagerBinaryPrimitiveNodeWithArgumentRead(
+                      primitive.getSourceSection(),
+                      selector,
+                      receiver,
+                      (ArgumentReadNode.LocalArgumentReadNode)argument,
+                      primitive);
       replace(replacement);
+      return replacement.executeGeneric(frame);
     }
     Object rcvr = receiver.executeGeneric(frame);
     Object arg  = argument.executeGeneric(frame);
