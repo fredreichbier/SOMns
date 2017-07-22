@@ -10,6 +10,7 @@ import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.NodeUtil;
 import com.oracle.truffle.api.source.SourceSection;
 
+import som.compiler.Variable;
 import som.compiler.Variable.Local;
 import som.interpreter.InliningVisitor;
 import som.interpreter.nodes.literals.IntegerLiteralNode;
@@ -133,17 +134,6 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
 
     public abstract ExpressionNode getExp();
 
-    @Specialization(guards = "isIncrementOperation(expValue)")
-    public final long writeIncrement(final VirtualFrame frame, final long expValue){
-      long value = ((IntegerLiteralNode)NodeUtil.findNodeChildren(getExp()).get(1)).getValue();
-      IncrementOperationNode newNode = LocalVariableNodeFactory.IncrementOperationNodeGen.create(var,
-              value,
-              getSourceSection());
-      replace(newNode);
-      frame.setLong(slot, expValue);
-      return expValue;
-    }
-
     @Specialization(guards = "isBoolKind(expValue)")
     public final boolean writeBoolean(final VirtualFrame frame, final boolean expValue) {
       frame.setBoolean(slot, expValue);
@@ -167,22 +157,6 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
       slot.setKind(FrameSlotKind.Object);
       frame.setObject(slot, expValue);
       return expValue;
-    }
-
-    protected final boolean isIncrementOperation(final Object expValue) {
-      ExpressionNode exp = getExp();
-      if(exp instanceof EagerBinaryPrimitiveNode) {
-        List<Node> children = NodeUtil.findNodeChildren(exp);
-        if(children.get(0) instanceof LocalVariableReadNode
-                && children.get(1) instanceof IntegerLiteralNode
-                && children.get(2) instanceof AdditionPrim) {
-          LocalVariableReadNode read = (LocalVariableReadNode)children.get(0);
-          if(read.var.equals(this.var)) {
-            return true;
-          }
-        }
-      }
-      return false;
     }
 
     protected final boolean isBoolKind(final boolean expValue) { // uses expValue to make sure guard is not converted to assertion
@@ -239,16 +213,34 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
   }
 
   public abstract static class IncrementOperationNode extends LocalVariableNode {
-    private long value;
-
-    public IncrementOperationNode(final Local variable, final long value, final SourceSection source) {
-      super(variable, source);
-      this.value = value;
-    }
+    private final long value;
+    private final ExpressionNode exp;
 
     public IncrementOperationNode(final IncrementOperationNode node) {
       super(node.var, node.sourceSection);
       this.value = node.getValue();
+      this.exp = node.getExp();
+    }
+
+    public IncrementOperationNode(final Local variable, final ExpressionNode exprNode, final SourceSection source) {
+      super(variable, source);
+      this.value = ((IntegerLiteralNode)NodeUtil.findNodeChildren(exprNode).get(1)).getValue();
+      this.exp = exprNode;
+    }
+
+    public static boolean isIncrementOperation(Variable var, ExpressionNode exprNode) {
+      if(exprNode instanceof EagerBinaryPrimitiveNode) {
+        List<Node> children = NodeUtil.findNodeChildren(exprNode);
+        if(children.get(0) instanceof LocalVariableReadNode
+                && children.get(1) instanceof IntegerLiteralNode
+                && children.get(2) instanceof AdditionPrim) {
+          LocalVariableReadNode read = (LocalVariableReadNode)children.get(0);
+          if(read.var.equals(var)) {
+            return true;
+          }
+        }
+      }
+      return false;
     }
 
     public long getValue() {
@@ -262,9 +254,14 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
       return incremented;
     }
 
-    //@Specialization(replaces = {"writeLong"})
+    @Specialization(replaces = {"writeLong"})
     public final Object writeGeneric(final VirtualFrame frame) {
-      throw new RuntimeException("re-re-write");
+      // TODO: Does this even work?
+      LocalVariableWriteNode replacement = LocalVariableNodeFactory.LocalVariableWriteNodeGen.create(
+              var, sourceSection, exp
+      );
+      replace(replacement);
+      return replacement.writeGeneric(frame, exp.executeGeneric(frame));
     }
 
     protected final boolean isLongKind(FrameSlot slot) { // uses slot to make sure guard is not converted to assertion
@@ -276,6 +273,10 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
         return true;
       }
       return false;
+    }
+
+    public ExpressionNode getExp() {
+      return exp;
     }
 
     @Override
@@ -294,8 +295,7 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
 
     @Override
     public void replaceAfterScopeChange(final InliningVisitor inliner) {
-      //inliner.updateWrite(var, this, getExp(), 0);
-      throw new RuntimeException();
+      inliner.updateWrite(var, this, getExp(), 0);
     }
   }
 }
