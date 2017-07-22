@@ -6,15 +6,22 @@ import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameSlotTypeException;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.Node;
+import com.oracle.truffle.api.nodes.NodeUtil;
 import com.oracle.truffle.api.source.SourceSection;
 
 import som.compiler.Variable.Local;
 import som.interpreter.InliningVisitor;
+import som.interpreter.nodes.literals.IntegerLiteralNode;
+import som.interpreter.nodes.nary.EagerBinaryPrimitiveNode;
 import som.interpreter.nodes.nary.ExprWithTagsNode;
+import som.primitives.arithmetic.AdditionPrim;
 import som.vm.constants.Nil;
 import tools.debugger.Tags.LocalVariableTag;
 import tools.dym.Tags.LocalVarRead;
 import tools.dym.Tags.LocalVarWrite;
+
+import java.util.List;
 
 
 public abstract class LocalVariableNode extends ExprWithTagsNode {
@@ -126,6 +133,17 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
 
     public abstract ExpressionNode getExp();
 
+    @Specialization(guards = "isIncrementOperation(expValue)")
+    public final long writeIncrement(final VirtualFrame frame, final long expValue){
+      long value = ((IntegerLiteralNode)NodeUtil.findNodeChildren(getExp()).get(1)).getValue();
+      IncrementOperationNode newNode = LocalVariableNodeFactory.IncrementOperationNodeGen.create(var,
+              value,
+              getSourceSection());
+      replace(newNode);
+      frame.setLong(slot, expValue);
+      return expValue;
+    }
+
     @Specialization(guards = "isBoolKind(expValue)")
     public final boolean writeBoolean(final VirtualFrame frame, final boolean expValue) {
       frame.setBoolean(slot, expValue);
@@ -149,6 +167,22 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
       slot.setKind(FrameSlotKind.Object);
       frame.setObject(slot, expValue);
       return expValue;
+    }
+
+    protected final boolean isIncrementOperation(final Object expValue) {
+      ExpressionNode exp = getExp();
+      if(exp instanceof EagerBinaryPrimitiveNode) {
+        List<Node> children = NodeUtil.findNodeChildren(exp);
+        if(children.get(0) instanceof LocalVariableReadNode
+                && children.get(1) instanceof IntegerLiteralNode
+                && children.get(2) instanceof AdditionPrim) {
+          LocalVariableReadNode read = (LocalVariableReadNode)children.get(0);
+          if(read.var.equals(this.var)) {
+            return true;
+          }
+        }
+      }
+      return false;
     }
 
     protected final boolean isBoolKind(final boolean expValue) { // uses expValue to make sure guard is not converted to assertion
@@ -201,6 +235,67 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
     @Override
     public void replaceAfterScopeChange(final InliningVisitor inliner) {
       inliner.updateWrite(var, this, getExp(), 0);
+    }
+  }
+
+  public abstract static class IncrementOperationNode extends LocalVariableNode {
+    private long value;
+
+    public IncrementOperationNode(final Local variable, final long value, final SourceSection source) {
+      super(variable, source);
+      this.value = value;
+    }
+
+    public IncrementOperationNode(final IncrementOperationNode node) {
+      super(node.var, node.sourceSection);
+      this.value = node.getValue();
+    }
+
+    public long getValue() {
+      return value;
+    }
+
+    @Specialization(guards = "isLongKind(slot)", rewriteOn = {FrameSlotTypeException.class})
+    public final long writeLong(final VirtualFrame frame) throws FrameSlotTypeException {
+      long incremented = frame.getLong(slot) + value;
+      frame.setLong(slot, incremented);
+      return incremented;
+    }
+
+    //@Specialization(replaces = {"writeLong"})
+    public final Object writeGeneric(final VirtualFrame frame) {
+      throw new RuntimeException("re-re-write");
+    }
+
+    protected final boolean isLongKind(FrameSlot slot) { // uses slot to make sure guard is not converted to assertion
+      if (slot.getKind() == FrameSlotKind.Long) {
+        return true;
+      }
+      if (slot.getKind() == FrameSlotKind.Illegal) {
+        slot.setKind(FrameSlotKind.Long);
+        return true;
+      }
+      return false;
+    }
+
+    @Override
+    protected final boolean isTaggedWith(final Class<?> tag) {
+      if (tag == LocalVarWrite.class) {
+        return true;
+      } else {
+        return super.isTaggedWith(tag);
+      }
+    }
+
+    @Override
+    public String toString() {
+      return this.getClass().getSimpleName() + "[" + var.name + "]";
+    }
+
+    @Override
+    public void replaceAfterScopeChange(final InliningVisitor inliner) {
+      //inliner.updateWrite(var, this, getExp(), 0);
+      throw new RuntimeException();
     }
   }
 }
