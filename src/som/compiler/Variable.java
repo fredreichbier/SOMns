@@ -1,7 +1,7 @@
 package som.compiler;
 
 import static som.interpreter.TruffleCompiler.transferToInterpreterAndInvalidate;
-import static som.interpreter.nodes.LocalVariableNode.IncrementOperationNode.isIncrementOperation;
+import static som.interpreter.nodes.NonLocalVariableNode.IncrementOperationNode.isIncrementOperation;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.frame.Frame;
@@ -22,6 +22,7 @@ import som.interpreter.nodes.ExpressionNode;
 import som.interpreter.nodes.LocalVariableNodeFactory;
 import som.interpreter.nodes.LocalVariableNodeFactory.LocalVariableReadNodeGen;
 import som.interpreter.nodes.LocalVariableNodeFactory.LocalVariableWriteNodeGen;
+import som.interpreter.nodes.NonLocalVariableNodeFactory;
 import som.interpreter.nodes.NonLocalVariableNodeFactory.NonLocalVariableReadNodeGen;
 import som.interpreter.nodes.NonLocalVariableNodeFactory.NonLocalVariableWriteNodeGen;
 import tools.SourceCoordinate;
@@ -187,14 +188,14 @@ public abstract class Variable {
         final ExpressionNode valueExpr, final SourceSection source) {
       transferToInterpreterAndInvalidate("Variable.getWriteNode");
       if (contextLevel == 0) {
-        if(isIncrementOperation(this, valueExpr)) {
-          return LocalVariableNodeFactory.IncrementOperationNodeGen.create(this, valueExpr, source);
-        } else {
           return LocalVariableWriteNodeGen.create(this, source, valueExpr);
-        }
       } else {
-        return NonLocalVariableWriteNodeGen.create(
-            contextLevel, this, source, valueExpr);
+        if (isIncrementOperation(this, valueExpr, contextLevel)) {
+          return NonLocalVariableNodeFactory.IncrementOperationNodeGen.create(contextLevel, this, valueExpr, source);
+        } else {
+          return NonLocalVariableWriteNodeGen.create(
+                  contextLevel, this, source, valueExpr);
+        }
       }
     }
 
