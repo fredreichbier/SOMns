@@ -187,15 +187,13 @@ public abstract class Variable {
     public ExpressionNode getWriteNode(final int contextLevel,
         final ExpressionNode valueExpr, final SourceSection source) {
       transferToInterpreterAndInvalidate("Variable.getWriteNode");
-      if (contextLevel == 0) {
+      if (isIncrementOperation(this, valueExpr, contextLevel)) {
+        return NonLocalVariableNodeFactory.IncrementOperationNodeGen.create(contextLevel, this, valueExpr, source);
+      } else if (contextLevel == 0) {
           return LocalVariableWriteNodeGen.create(this, source, valueExpr);
       } else {
-        if (isIncrementOperation(this, valueExpr, contextLevel)) {
-          return NonLocalVariableNodeFactory.IncrementOperationNodeGen.create(contextLevel, this, valueExpr, source);
-        } else {
           return NonLocalVariableWriteNodeGen.create(
                   contextLevel, this, source, valueExpr);
-        }
       }
     }
 

@@ -9,6 +9,7 @@ import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.NodeUtil;
 import com.oracle.truffle.api.source.SourceSection;
 
+import com.oracle.truffle.dsl.processor.generator.DefaultNodeGenFactory;
 import som.compiler.Variable;
 import som.compiler.Variable.Local;
 import som.interpreter.InliningVisitor;
@@ -238,15 +239,16 @@ public abstract class NonLocalVariableNode extends ContextualNode {
     public static boolean isIncrementOperation(Variable var, ExpressionNode exprNode, int contextLevel) {
       if(exprNode instanceof EagerBinaryPrimitiveNode) {
         List<Node> children = NodeUtil.findNodeChildren(exprNode);
-        if(children.get(0) instanceof NonLocalVariableReadNode
+        if(children.get(0) instanceof LocalVariableNode.LocalVariableReadNode) {
+          return children.get(1) instanceof IntegerLiteralNode
+                 && children.get(2) instanceof AdditionPrim;
+        } else if(children.get(0) instanceof NonLocalVariableReadNode
                 && children.get(1) instanceof IntegerLiteralNode
                 && children.get(2) instanceof AdditionPrim) {
           NonLocalVariableReadNode read = (NonLocalVariableReadNode) children.get(0);
-          if(read.var.equals(var) && read.contextLevel >= contextLevel) {
+          if(read.var.equals(var)) {
             return true;
-          } /*else if(read.var.equals(var)) {
-            System.out.println("XXX: " + read.contextLevel + " < " + contextLevel);
-          }*/
+          }
         }
       }
       return false;
@@ -258,21 +260,27 @@ public abstract class NonLocalVariableNode extends ContextualNode {
 
     @Specialization(guards = "isLongKind(slot)", rewriteOn = {FrameSlotTypeException.class})
     public final long writeLong(final VirtualFrame frame) throws FrameSlotTypeException {
-      SBlock self = (SBlock) SArguments.rcvr(frame);
-      int i = 0;
-      int readContextLevel = ((NonLocalVariableReadNode) NodeUtil.findNodeChildren(exp).get(0)).getContextLevel();
-      assert contextLevel <= readContextLevel;
-      while (i < contextLevel - 1) {
-        self = (SBlock) self.getOuterSelf();
-        i++;
+      long incremented;
+      if(contextLevel > 0) {
+        SBlock self = (SBlock) SArguments.rcvr(frame);
+        int i = 0;
+        int readContextLevel = ((NonLocalVariableReadNode) NodeUtil.findNodeChildren(exp).get(0)).getContextLevel();
+        assert contextLevel <= readContextLevel;
+        while (i < contextLevel - 1) {
+          self = (SBlock) self.getOuterSelf();
+          i++;
+        }
+        MaterializedFrame writeContext = self.getContext();
+        while (i < readContextLevel - 1) {
+          self = (SBlock) self.getOuterSelf();
+          i++;
+        }
+        incremented = self.getContext().getLong(slot) + value;
+        writeContext.setLong(slot, incremented);
+      } else {
+        incremented = frame.getLong(slot) + value;
+        frame.setLong(slot, incremented);
       }
-      MaterializedFrame writeContext = self.getContext();
-      while (i < readContextLevel - 1) {
-        self = (SBlock) self.getOuterSelf();
-        i++;
-      }
-      long incremented = self.getContext().getLong(slot) + value;
-      writeContext.setLong(slot, incremented);
       return incremented;
     }
 
